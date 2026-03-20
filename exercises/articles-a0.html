@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Articles &mdash; Fill in the Blanks</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --primary: #6366f1;
+    --primary-dark: #4f46e5;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --muted: #64748b;
+    --radius: 0.75rem;
+  }
+  body {
+    font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+
+  /* Timer */
+  .timer-bar {
+    display: -webkit-flex; display: flex;
+    -webkit-align-items: center; align-items: center;
+    gap: 0.75rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    padding: 0.625rem 1.5rem;
+    margin-bottom: 1.5rem;
+    font-size: 1.1rem; font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    width: -webkit-fit-content; width: fit-content;
+    position: -webkit-sticky; position: sticky;
+    top: 0.75rem;
+    z-index: 100;
+    margin-left: auto; margin-right: auto;
+  }
+  .timer-icon { font-size: 1.3rem; }
+  #timer-display { min-width: 3.75rem; text-align: center; }
+  #timer-display.warning { color: var(--danger); -webkit-animation: pulse 1s infinite; animation: pulse 1s infinite; }
+  @-webkit-keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+  /* Notification */
+  #notification {
+    position: fixed; top: 0.5rem; left: 50%;
+    -webkit-transform: translateX(-50%);
+    transform: translateX(-50%);
+    padding: 0.625rem 1.5rem; border-radius: 50px;
+    font-weight: 600; font-size: 1.1rem;
+    opacity: 0;
+    -webkit-transition: opacity .4s;
+    transition: opacity .4s;
+    pointer-events: none; z-index: 200;
+    box-shadow: 0 4px 16px rgba(0,0,0,.15);
+    white-space: nowrap;
+  }
+  #notification.show { opacity: 1; }
+  #notification.success { background: var(--success); color: #fff; }
+  #notification.error { background: var(--danger); color: #fff; }
+
+  /* Task card */
+  .task {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+  }
+  .task-label {
+    font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--muted); margin-bottom: 0.625rem;
+  }
+  .task-title {
+    font-size: 0.95rem; font-weight: 600; color: var(--text);
+    margin-bottom: 0.75rem;
+  }
+  .sentence {
+    display: -webkit-flex; display: flex;
+    -webkit-flex-wrap: wrap; flex-wrap: wrap;
+    -webkit-align-items: baseline; align-items: baseline;
+    gap: 0.2rem 0.35rem;
+    font-size: 1.05rem; line-height: 2.2;
+  }
+  .word { white-space: pre-wrap; }
+
+  /* Blank */
+  .blank-btn {
+    display: inline-block;
+    background: transparent;
+    border: none;
+    border-bottom: 2.5px solid var(--primary);
+    padding: 0 0.5rem 0.05rem;
+    min-width: 5rem;
+    text-align: center;
+    cursor: pointer;
+    font-size: 1rem;
+    font-family: inherit;
+    color: transparent;
+    line-height: 1.6;
+    -webkit-transition: border-color .15s; transition: border-color .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .blank-btn.has-text { color: var(--primary); }
+  .blank-btn:hover:not(.answered):not(.select-answer) { border-bottom-color: var(--primary-dark); background: rgba(99,102,241,.05); border-radius: 4px 4px 0 0; }
+  .blank-btn.answered { border-bottom-color: var(--success); color: #15803d; cursor: default; }
+  .blank-btn.select-answer {
+    border: 1.5px dashed var(--primary);
+    border-radius: 20px;
+    padding: 0.2rem 1rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+    cursor: default;
+    min-width: auto;
+  }
+  .blank-btn.select-answer.answered {
+    border-style: solid;
+    border-color: var(--success);
+    color: #15803d;
+  }
+
+  /* Options */
+  .options-area {
+    display: -webkit-flex; display: flex;
+    -webkit-flex-wrap: wrap; flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.875rem;
+    padding-top: 0.875rem;
+    border-top: 1px solid var(--border);
+  }
+  .options-area.hidden { display: none; }
+  .opt-btn {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    padding: 0.375rem 1rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-family: inherit;
+    -webkit-transition: border-color .15s, background .15s; transition: border-color .15s, background .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .opt-btn:hover:not(:disabled) { border-color: var(--primary); background: #eef2ff; }
+  .opt-btn.correct { border-color: var(--success); background: #f0fdf4; color: #15803d; }
+  .opt-btn.wrong { border-color: var(--danger); background: #fef2f2; -webkit-animation: shake .4s; animation: shake .4s; }
+  .opt-btn:disabled { opacity: 0.6; cursor: default; }
+  @-webkit-keyframes shake {
+    0%,100%{-webkit-transform:translateX(0);transform:translateX(0)}
+    25%{-webkit-transform:translateX(-5px);transform:translateX(-5px)}
+    75%{-webkit-transform:translateX(5px);transform:translateX(5px)}
+  }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)}
+    25%{transform:translateX(-5px)}
+    75%{transform:translateX(5px)}
+  }
+
+  /* Score screen */
+  #score-screen {
+    display: none; -webkit-flex-direction: column; flex-direction: column;
+    -webkit-align-items: center; align-items: center;
+    gap: 1.25rem;
+    background: var(--card); border-radius: var(--radius);
+    padding: 3rem 2.5rem; max-width: 26rem; width: 100%;
+    text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,.1);
+    margin: 0 auto;
+  }
+  .score-emoji { font-size: 4rem; }
+  .score-title { font-size: 1.8rem; font-weight: 700; }
+  .score-value { font-size: 3rem; font-weight: 800; color: var(--primary); }
+  .score-detail { color: var(--muted); font-size: 1rem; }
+  .btn-retry {
+    margin-top: 0.5rem;
+    background: var(--primary); color: #fff; border: none;
+    border-radius: 50px; padding: 0.875rem 2.25rem;
+    font-size: 1rem; font-weight: 600; cursor: pointer;
+    -webkit-transition: background .15s; transition: background .15s;
+    font-family: inherit;
+  }
+  .btn-retry:hover { background: var(--primary-dark); }
+
+  /* Carousel-specific */
+  .carousel-header {
+    position: sticky;
+    top: 0.5rem;
+    z-index: 100;
+    background: var(--bg);
+    padding: 0.5rem 0 0.75rem;
+  }
+  .steps {
+    display: flex;
+    gap: 0.3rem;
+    margin-bottom: 0.625rem;
+  }
+  .step {
+    flex: 1;
+    height: 7px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    background: var(--border);
+    transition: background 0.2s, transform 0.15s;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .step--active { background: var(--primary); transform: scaleY(1.5); }
+  .step--clean { background: var(--success); }
+  .step--mistake { background: #f97316; }
+  .step--partial { background: #94a3b8; }
+  .step:hover:not(.step--active) { opacity: 0.75; }
+  .carousel-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .carousel-meta strong { color: var(--text); }
+  .carousel-nav {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+  .nav-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 50px;
+    padding: 0.625rem 1.5rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color .15s, background .15s, color .15s;
+  }
+  .nav-btn:hover:not(:disabled) { border-color: var(--primary); background: #eef2ff; color: var(--primary); }
+  .nav-btn:disabled { opacity: 0.35; cursor: default; }
+  .nav-btn--next {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+    margin-left: auto;
+  }
+  .nav-btn--next:hover:not(:disabled) { background: var(--primary-dark); border-color: var(--primary-dark); color: #fff; }
+
+  @media (max-width: 480px) {
+    body { padding: 1.25rem 0.75rem; }
+    h1 { font-size: 1.35rem; }
+    .sentence { font-size: 0.95rem; }
+    .blank-btn { min-width: 3.5rem; font-size: 0.9rem; }
+    .opt-btn { font-size: 0.875rem; padding: 0.3rem 0.75rem; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Articles</h1>
+<p class="subtitle">Fill in the blanks</p>
+
+<div class="timer-bar" id="timer-bar" style="display:none">
+  <span class="timer-icon">&#9201;</span>
+  <span id="timer-display">0:00</span>
+</div>
+
+<div id="carousel-wrap" style="display:block">
+  <div class="carousel-header">
+    <div class="steps" id="steps"></div>
+    <div class="carousel-meta">
+      <span id="task-counter">Task 1 of N</span>
+      <span id="tasks-left"><strong>N</strong> unanswered</span>
+    </div>
+  </div>
+  <div id="carousel-task"></div>
+  <div class="carousel-nav">
+    <button class="nav-btn" id="btn-prev">&#8592; Previous</button>
+    <button class="nav-btn nav-btn--next" id="btn-next">Next &#8594;</button>
+  </div>
+</div>
+
+<div id="notification"></div>
+
+<div id="score-screen">
+  <div class="score-emoji" id="score-emoji">&#127881;</div>
+  <div class="score-title" id="score-title">Done!</div>
+  <div class="score-value" id="score-value"></div>
+  <div class="score-detail" id="score-detail"></div>
+  <button class="btn-retry" onclick="restart()">Try Again</button>
+</div>
+
+<script>
+(function() {
+  var ROWS = [{"id":"39899463-a7e9-4fb0-beb5-b0a0b21e0d3f","title":null,"items":[{"id":"8eca554f-25f5-43db-abc3-505a4faae5d3","type":"text","content":"He has ","options":null},{"id":"cc7a9fba-ad26-4a79-8a06-65dba6b3cb9d","type":"question","content":null,"options":["a","an","the","some"]},{"id":"e9efbe29-0e71-49ce-a7e6-65d17f6eac8a","type":"text","content":" dog.","options":null}]},{"id":"37268db0-ca8c-49a3-8149-0d1f1f9425e7","title":null,"items":[{"id":"0eb05f1d-9706-4f4f-b64f-738f835eef2f","type":"text","content":"She wants ","options":null},{"id":"7c3f1a21-200f-4b3c-9ba8-7a7038210011","type":"question","content":null,"options":["an","a","the","some"]},{"id":"89d42bb4-ff84-4f82-9d17-5971a2feb143","type":"text","content":" orange.","options":null}]},{"id":"ea911ce5-239a-4230-9da8-cdc33ae03860","title":null,"items":[{"id":"536581e3-4f04-4fdc-a77f-bce7a12cbc0b","type":"text","content":"I like ","options":null},{"id":"9dcfe47a-6cbc-4499-bd66-46ab6722622f","type":"question","content":null,"options":["the","a","an","some"]},{"id":"659a92d8-c1f0-4916-b636-e54b22d7b5e5","type":"text","content":" blue sky.","options":null}]},{"id":"628e4f42-0b5b-480b-a7b9-8a87489c7755","title":null,"items":[{"id":"15c1aa6e-9280-49d1-be60-31f79d349945","type":"text","content":"It is ","options":null},{"id":"c3d23b97-ff27-4bf0-b06d-5578243bda44","type":"question","content":null,"options":["a","an","the","some"]},{"id":"cc89fdc6-08e0-4885-8390-1a53e40417d3","type":"text","content":" small house.","options":null}]},{"id":"8351eb79-cd42-4479-acc7-d8e8d5354443","title":null,"items":[{"id":"c21b0bbc-1008-4123-95eb-f629a05c891f","type":"text","content":"We visit ","options":null},{"id":"2cd0f727-6069-4838-8d0f-d0b5fa9a250e","type":"question","content":null,"options":["the","a","an","some"]},{"id":"f1e3dc44-6421-4ff0-bf97-c719bf570ee5","type":"text","content":" museum.","options":null}]},{"id":"15b6ec35-45a2-4f15-946b-db3532ac77fd","title":null,"items":[{"id":"287ed276-f235-4bc9-a47c-cf162bde98dc","type":"text","content":"They live near ","options":null},{"id":"1274cd71-e6bf-4301-adce-df312e949e37","type":"question","content":null,"options":["a","an","the","some"]},{"id":"d5031ab7-41ad-422d-adde-dd090899459b","type":"text","content":" big tree.","options":null}]},{"id":"ac656fe0-7197-4872-9b72-55beed9ed0b4","title":null,"items":[{"id":"4c8c08cb-8358-4c44-8be7-fac9653ee1f4","type":"text","content":"You need ","options":null},{"id":"5b3a524e-5efa-45c6-8f15-0d9b1d584b2a","type":"question","content":null,"options":["a","an","the","some"]},{"id":"dbeb8201-f726-4087-b3aa-b8b06c5c3eed","type":"text","content":" new coat.","options":null}]},{"id":"e2fdc982-6cdb-4f5d-bc40-609323b78b7e","title":null,"items":[{"id":"1c13bbe4-cc25-4e72-9f3c-7146e95623e3","type":"text","content":"He wants ","options":null},{"id":"18a6226b-21fa-4957-b049-4be214183a3e","type":"question","content":null,"options":["an","a","the","some"]},{"id":"3def3bc3-537d-41ac-a1f4-707cee419b6a","type":"text","content":" old book.","options":null}]},{"id":"15b3b092-f0d3-4ff3-a813-39c9e9346cd7","title":null,"items":[{"id":"e3208b79-2e33-4d6e-aa79-18f8b372115f","type":"text","content":"She eats ","options":null},{"id":"83c915a7-a155-4a31-b573-6de6cddefff1","type":"question","content":null,"options":["a","an","the","some"]},{"id":"11ef0e95-26f5-4771-ae2f-4980e6e53334","type":"text","content":" banana.","options":null}]},{"id":"ab7c6428-7f75-4181-a7bc-23366d1ffbaa","title":null,"items":[{"id":"6ef63cf7-1b9f-4942-87a7-bc1fa54d61fa","type":"text","content":"I read ","options":null},{"id":"e46155d7-3bf3-4215-b7fa-9b4ee5d8d322","type":"question","content":null,"options":["the","a","an","some"]},{"id":"ff8c5b6c-f0f5-45bd-af2d-73674668ce77","type":"text","content":" newspaper.","options":null}]}];
+  var TIMER_SECONDS = 180;
+  var CORRECT_BONUS = 3;
+  var WRONG_PENALTY = 5;
+
+  var currentIdx = 0;
+  var totalRows = ROWS.length;
+  var rowTotal = ROWS.map(function(r) {
+    return r.items.filter(function(i) { return i.type === 'question'; }).length;
+  });
+  var rowAnswered = ROWS.map(function() { return 0; });
+  var rowMistakes = ROWS.map(function() { return 0; });
+  var rowState = ROWS.map(function() { return 'pending'; });
+  var totalQuestions = rowTotal.reduce(function(s, n) { return s + n; }, 0);
+  var globalAnswered = 0;
+  var timerLeft = TIMER_SECONDS;
+  var timerInterval = null;
+  var gameOver = false;
+  var taskEls = [];
+
+  function shuffle(a) {
+    var b = a.slice();
+    for (var i = b.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = b[i]; b[i] = b[j]; b[j] = t;
+    }
+    return b;
+  }
+
+  function formatTime(s) {
+    var abs = s < 0 ? -s : s;
+    var m = Math.floor(abs / 60);
+    var sec = abs % 60;
+    return m + ':' + (sec < 10 ? '0' : '') + sec;
+  }
+
+  function updateTimerDisplay() {
+    var el = document.getElementById('timer-display');
+    if (!el) return;
+    el.textContent = formatTime(timerLeft);
+    el.className = (timerLeft <= 10 && timerLeft > 0) ? 'warning' : '';
+  }
+
+  var notifTimeout = null;
+  function showNotification(msg, type) {
+    var el = document.getElementById('notification');
+    el.textContent = msg;
+    el.className = 'show ' + type;
+    clearTimeout(notifTimeout);
+    notifTimeout = setTimeout(function() { el.className = ''; }, 1000);
+  }
+
+  function startTimer() {
+    if (TIMER_SECONDS <= 0) return;
+    document.getElementById('timer-bar').style.display = '-webkit-flex';
+    document.getElementById('timer-bar').style.display = 'flex';
+    updateTimerDisplay();
+    timerInterval = setInterval(function() {
+      if (gameOver) return;
+      timerLeft--;
+      updateTimerDisplay();
+      if (timerLeft <= 0) { timerLeft = 0; updateTimerDisplay(); endGame(false); }
+    }, 1000);
+  }
+
+  function updateSteps() {
+    var dots = document.querySelectorAll('.step');
+    for (var i = 0; i < dots.length; i++) {
+      var cls = 'step step--' + (i === currentIdx ? 'active' : rowState[i]);
+      dots[i].className = cls;
+    }
+  }
+
+  function updateUnanswered() {
+    var unanswered = 0;
+    for (var i = 0; i < totalRows; i++) { unanswered += rowTotal[i] - rowAnswered[i]; }
+    var leftEl = document.getElementById('tasks-left');
+    leftEl.innerHTML = unanswered > 0
+      ? '<strong>' + unanswered + '</strong> unanswered'
+      : 'All answered ✓';
+  }
+
+  function updateProgress() {
+    document.getElementById('task-counter').textContent = 'Task ' + (currentIdx + 1) + ' of ' + totalRows;
+  }
+
+  function updateNav() {
+    var prevBtn = document.getElementById('btn-prev');
+    var nextBtn = document.getElementById('btn-next');
+    prevBtn.disabled = currentIdx === 0;
+    nextBtn.textContent = currentIdx === totalRows - 1 ? 'Finish ✓' : 'Next →';
+  }
+
+  function goTo(idx) {
+    if (idx < 0 || idx >= totalRows || gameOver) return;
+    if (rowState[currentIdx] === 'active') {
+      if (rowAnswered[currentIdx] >= rowTotal[currentIdx] && rowTotal[currentIdx] > 0) {
+        rowState[currentIdx] = rowMistakes[currentIdx] > 0 ? 'mistake' : 'clean';
+      } else if (rowAnswered[currentIdx] > 0) {
+        rowState[currentIdx] = 'partial';
+      } else {
+        rowState[currentIdx] = 'pending';
+      }
+    }
+    currentIdx = idx;
+    rowState[idx] = 'active';
+    var container = document.getElementById('carousel-task');
+    container.innerHTML = '';
+    container.appendChild(taskEls[idx]);
+    updateSteps();
+    updateProgress();
+    updateNav();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function goNext() {
+    if (currentIdx === totalRows - 1) { endGame(true); } else { goTo(currentIdx + 1); }
+  }
+  function goPrev() { goTo(currentIdx - 1); }
+
+  function onCorrect(rowIdx) {
+    rowAnswered[rowIdx]++;
+    globalAnswered++;
+    updateUnanswered();
+    if (TIMER_SECONDS > 0) {
+      timerLeft = Math.min(timerLeft + CORRECT_BONUS, TIMER_SECONDS * 2);
+      updateTimerDisplay();
+      showNotification('+' + CORRECT_BONUS + 's  Correct! ✓', 'success');
+    } else {
+      showNotification('Correct! ✓', 'success');
+    }
+    if (rowAnswered[rowIdx] === rowTotal[rowIdx]) {
+      rowState[rowIdx] = rowMistakes[rowIdx] > 0 ? 'mistake' : 'clean';
+      updateSteps();
+      if (!gameOver && rowIdx === currentIdx && globalAnswered < totalQuestions) {
+        setTimeout(function() {
+          if (!gameOver && currentIdx === rowIdx) {
+            var nextIdx = -1;
+            for (var i = 1; i <= totalRows; i++) {
+              var candidate = (currentIdx + i) % totalRows;
+              if (rowAnswered[candidate] < rowTotal[candidate]) { nextIdx = candidate; break; }
+            }
+            if (nextIdx !== -1) { goTo(nextIdx); }
+          }
+        }, 400);
+      }
+    }
+    if (globalAnswered === totalQuestions) {
+      setTimeout(function() { endGame(true); }, 500);
+    }
+  }
+
+  function onWrong(rowIdx) {
+    rowMistakes[rowIdx]++;
+    if (TIMER_SECONDS > 0) {
+      timerLeft = Math.max(0, timerLeft - WRONG_PENALTY);
+      updateTimerDisplay();
+      showNotification('-' + WRONG_PENALTY + 's  Wrong! ✗', 'error');
+      if (timerLeft <= 0) endGame(false);
+    } else {
+      showNotification('Wrong! ✗', 'error');
+    }
+  }
+
+  function endGame(completed) {
+    if (gameOver) return;
+    gameOver = true;
+    if (timerInterval) clearInterval(timerInterval);
+    document.getElementById('carousel-wrap').style.display = 'none';
+    if (TIMER_SECONDS > 0) document.getElementById('timer-bar').style.display = 'none';
+    var ss = document.getElementById('score-screen');
+    ss.style.display = '-webkit-flex';
+    ss.style.display = 'flex';
+    var totalMistakes = rowMistakes.reduce(function(s, n) { return s + n; }, 0);
+    var accuracy = (globalAnswered + totalMistakes) > 0 ? Math.round((globalAnswered / (globalAnswered + totalMistakes)) * 100) : 0;
+    var emoji = !completed ? '⏰' : accuracy === 100 ? '🏆' : accuracy >= 75 ? '🎉' : accuracy >= 50 ? '👍' : '📚';
+    document.getElementById('score-emoji').textContent = emoji;
+    if (!completed) document.getElementById('score-title').textContent = "Time’s Up!";
+    document.getElementById('score-value').textContent = accuracy + '%';
+    document.getElementById('score-detail').textContent =
+      globalAnswered + ' of ' + totalQuestions + ' correct · ' + totalMistakes + ' mistake' + (totalMistakes !== 1 ? 's' : '');
+  }
+
+  function buildTask(row, rowIdx) {
+    var task = document.createElement('div');
+    task.className = 'task';
+    var label = document.createElement('div');
+    label.className = 'task-label';
+    label.textContent = 'Task ' + (rowIdx + 1) + ' of ' + totalRows;
+    task.appendChild(label);
+    if (row.title) {
+      var titleEl = document.createElement('div');
+      titleEl.className = 'task-title';
+      titleEl.textContent = row.title;
+      task.appendChild(titleEl);
+    }
+    var sentence = document.createElement('div');
+    sentence.className = 'sentence';
+    task.appendChild(sentence);
+    var qCount = row.items.filter(function(i) { return i.type === 'question'; }).length;
+    var textCount = row.items.filter(function(i) { return i.type === 'text'; }).length;
+    var isSingle = qCount === 1;
+    var isOnlyQuestion = isSingle && textCount === 0;
+    row.items.forEach(function(item) {
+      if (item.type === 'text') {
+        var span = document.createElement('span');
+        span.className = 'word';
+        span.textContent = item.content;
+        sentence.appendChild(span);
+        return;
+      }
+      var correctAns = item.options[0];
+      var shuffled = shuffle(item.options);
+      var blank = document.createElement(isOnlyQuestion ? 'span' : 'button');
+      blank.className = 'blank-btn' + (isOnlyQuestion ? ' select-answer' : '');
+      if (isOnlyQuestion) { blank.textContent = 'Select answer'; }
+      else { blank.innerHTML = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'; }
+      sentence.appendChild(blank);
+      var optArea = document.createElement('div');
+      optArea.className = isSingle ? 'options-area' : 'options-area hidden';
+      (function(b, oa, correct, opts, rIdx) {
+        opts.forEach(function(opt) {
+          var btn = document.createElement('button');
+          btn.className = 'opt-btn';
+          btn.textContent = opt;
+          btn.addEventListener('click', function() {
+            if (b.classList.contains('answered') || gameOver) return;
+            if (opt === correct) {
+              b.textContent = opt;
+              b.classList.add('answered');
+              b.classList.remove('select-answer');
+              oa.querySelectorAll('.opt-btn').forEach(function(x) { x.disabled = true; });
+              btn.classList.add('correct');
+              if (!isSingle) oa.classList.add('hidden');
+              onCorrect(rIdx);
+            } else {
+              btn.classList.add('wrong');
+              setTimeout(function() { btn.classList.remove('wrong'); }, 500);
+              onWrong(rIdx);
+            }
+          });
+          oa.appendChild(btn);
+        });
+        if (!isSingle) {
+          b.addEventListener('click', function() {
+            if (b.classList.contains('answered') || gameOver) return;
+            task.querySelectorAll('.options-area:not(.always-on)').forEach(function(a) { a.classList.add('hidden'); });
+            oa.classList.remove('hidden');
+          });
+        }
+      })(blank, optArea, correctAns, shuffled, rowIdx);
+      task.appendChild(optArea);
+    });
+    return task;
+  }
+
+  function buildSteps() {
+    var stepsEl = document.getElementById('steps');
+    stepsEl.innerHTML = '';
+    ROWS.forEach(function(_, i) {
+      var dot = document.createElement('button');
+      dot.className = 'step step--pending';
+      dot.title = 'Task ' + (i + 1);
+      (function(idx) {
+        dot.addEventListener('click', function() { goTo(idx); });
+      })(i);
+      stepsEl.appendChild(dot);
+    });
+  }
+
+  function buildAll() {
+    taskEls = ROWS.map(function(row, i) { return buildTask(row, i); });
+  }
+
+  function restart() {
+    gameOver = false;
+    globalAnswered = 0;
+    currentIdx = 0;
+    rowAnswered = ROWS.map(function() { return 0; });
+    rowMistakes = ROWS.map(function() { return 0; });
+    rowState = ROWS.map(function() { return 'pending'; });
+    timerLeft = TIMER_SECONDS;
+    if (timerInterval) clearInterval(timerInterval);
+    clearTimeout(notifTimeout);
+    document.getElementById('notification').className = '';
+    document.getElementById('score-screen').style.display = 'none';
+    document.getElementById('carousel-wrap').style.display = 'block';
+    buildAll();
+    buildSteps();
+    goTo(0);
+    updateUnanswered();
+    startTimer();
+  }
+
+  window.restart = restart;
+  document.getElementById('btn-prev').addEventListener('click', goPrev);
+  document.getElementById('btn-next').addEventListener('click', goNext);
+
+  buildAll();
+  buildSteps();
+  goTo(0);
+  updateUnanswered();
+  startTimer();
+})();
+</script>
+</body>
+</html>
